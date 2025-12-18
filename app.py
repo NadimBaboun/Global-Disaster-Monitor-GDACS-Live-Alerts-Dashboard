@@ -237,6 +237,9 @@ summary_tbl = pd.DataFrame(
 if not show_all_days:
     summary_tbl = summary_tbl.tail(10)
 
+# Make row numbering start at 1 instead of 0
+summary_tbl.index = range(1, len(summary_tbl) + 1)
+
 st.sidebar.dataframe(
     summary_tbl,
     use_container_width=True,
@@ -339,6 +342,7 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
 
 
