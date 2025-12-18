@@ -12,13 +12,10 @@ st.set_page_config(page_title="Global Disaster Monitor (GDACS)", page_icon="🌐
 GDACS_RSS_URL = "https://www.gdacs.org/xml/rss.xml"
 CACHE_FILE = "GDACS_cache.csv"
 
-# RSS namespaces
+# Only the namespaces we actually use in XPath paths below
 NS = {
-    "dc": "http://purl.org/dc/elements/1.1/",
     "geo": "http://www.w3.org/2003/01/geo/wgs84_pos#",
     "gdacs": "http://www.gdacs.org",
-    "georss": "http://www.georss.org/georss",
-    "atom": "http://www.w3.org/2005/Atom",
 }
 
 
@@ -41,15 +38,6 @@ def _find_text(el, path: str, default=None):
     if node is None or node.text is None:
         return default
     return node.text.strip()
-
-
-def _find_attr(el, path: str, attr: str, default=None):
-    if el is None:
-        return default
-    node = el.find(path, NS)
-    if node is None:
-        return default
-    return node.attrib.get(attr, default)
 
 
 @st.cache_data(ttl=600)
@@ -90,30 +78,23 @@ def rss_to_df(xml_text: str) -> pd.DataFrame:
     root = ET.fromstring(xml_text)
     items = root.findall("./channel/item")
 
-    # Map columns to how they should be extracted
+    # Keep ONLY columns that are used by the website (filters/charts/table/map)
     FIELDS = {
-        # text fields
+        # text fields (used in UI)
         "title": ("text", "title", ""),
-        "description": ("text", "description", ""),
         "link": ("text", "link", ""),
         "event_type": ("text", "gdacs:eventtype", "Unknown"),
         "alert_level": ("text", "gdacs:alertlevel", "Unknown"),
         "country": ("text", "gdacs:country", "Unknown"),
-        "iso3": ("text", "gdacs:iso3", ""),
-        "event_id": ("text", "gdacs:eventid", ""),
-        "episode_id": ("text", "gdacs:episodeid", ""),
         "severity_text": ("text", "gdacs:severity", ""),
         "population_text": ("text", "gdacs:population", ""),
-        # numeric fields
+        # numeric fields (used in charts/map)
         "alert_score": ("num", "gdacs:alertscore", None),
         "latitude": ("num", "geo:Point/geo:lat", None),
         "longitude": ("num", "geo:Point/geo:long", None),
-        # datetime fields
+        # datetime fields (used to build main_time/date_utc)
         "pub_date": ("date", "pubDate", None),
-        "date_added": ("date", "gdacs:dateadded", None),
-        "date_modified": ("date", "gdacs:datemodified", None),
         "from_date": ("date", "gdacs:fromdate", None),
-        "to_date": ("date", "gdacs:todate", None),
     }
 
     rows = []
@@ -126,7 +107,6 @@ def rss_to_df(xml_text: str) -> pd.DataFrame:
                 row[col] = pd.to_numeric(_find_text(it, path, default), errors="coerce")
             elif kind == "date":
                 row[col] = _parse_rfc822(_find_text(it, path, default))
-
         rows.append(row)
 
     df = pd.DataFrame(rows)
@@ -155,8 +135,8 @@ def load_data_with_cache():
         if os.path.exists(CACHE_FILE):
             cached = pd.read_csv(CACHE_FILE, encoding="utf-8")
 
-            # Restore datetime columns if present
-            dt_cols = ["pub_date", "date_added", "date_modified", "from_date", "to_date", "main_time"]
+            # Restore only datetime columns we actually rely on
+            dt_cols = ["pub_date", "from_date", "main_time"]
             for c in dt_cols:
                 if c in cached.columns:
                     cached[c] = pd.to_datetime(cached[c], utc=True, errors="coerce")
@@ -207,15 +187,13 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
 else:
     start_d, end_d = default_start, today_utc
 
-# ---------- UPDATED: selection-aware message ----------
+# Selection-aware message
 no_filter_selected = (not selected_types) or (not selected_levels) or (not selected_countries)
-
 if no_filter_selected:
     st.info("Please select at least one option from each filter to continue.")
     st.stop()
-# ---------------------------------------------------
 
-# Clean, single-mask filtering
+# Filter
 mask = (
     df["event_type"].isin(selected_types)
     & df["alert_level"].isin(selected_levels)
@@ -224,7 +202,6 @@ mask = (
 )
 filtered = df.loc[mask].copy()
 
-# Keep the original message only when filters ARE selected but no data matches
 if filtered.empty:
     st.warning("No records match your filters.")
     st.stop()
@@ -290,25 +267,17 @@ fig, ax = plt.subplots(figsize=(5, 5))
 ax.pie(type_counts.values, labels=type_counts.index.astype(str), autopct="%1.1f%%", startangle=90)
 st.pyplot(fig)
 
-# ---------- UPDATED: "Top countries" with a slider to control how many to show ----------
+# Top countries + slider
 st.subheader("Top countries (by alert count)")
 
-country_counts = (
-    filtered["country"]
-    .value_counts()
-    .sort_values(ascending=False)
-)
+country_counts = filtered["country"].value_counts().sort_values(ascending=False)
 
-# Default number shown
 default_n = min(10, len(country_counts))
 max_n = min(60, len(country_counts))
-
 top_n = st.session_state.get("top_n_countries", default_n)
 
-# Chart first (OG look)
 st.bar_chart(country_counts.head(top_n))
 
-# --- Blue slider styling (CSS hack, safe & common in Streamlit) ---
 st.markdown(
     """
     <style>
@@ -316,8 +285,7 @@ st.markdown(
     div[data-baseweb="slider"] > div > div > div {
         background-color: #1f77b4 !important;
     }
-
-    /* Slider knob (the draggable circle) */
+    /* Slider knob */
     div[data-baseweb="slider"] [role="slider"] {
         background-color: #1f77b4 !important;
         border-color: #1f77b4 !important;
@@ -327,7 +295,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Slider UNDER the chart
 top_n = st.slider(
     "Number of countries shown",
     min_value=5,
@@ -335,7 +302,6 @@ top_n = st.slider(
     value=top_n,
     key="top_n_countries",
 )
-# -----------------------------------------------------------------------------------
 
 st.subheader("Map (highest alert score)")
 map_df = (
@@ -356,7 +322,6 @@ show_cols = [
     "population_text",
     "link",
 ]
-show_cols = [c for c in show_cols if c in filtered.columns]
 st.dataframe(
     filtered.sort_values("main_time", ascending=False)[show_cols].head(50),
     use_container_width=True,
@@ -367,4 +332,3 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
-
