@@ -305,8 +305,15 @@ st.bar_chart(country_counts.head(top_n))
 st.markdown(
     """
     <style>
+    /* Slider track */
     div[data-baseweb="slider"] > div > div > div {
         background-color: #1f77b4 !important;
+    }
+
+    /* Slider knob (the draggable circle) */
+    div[data-baseweb="slider"] [role="slider"] {
+        background-color: #1f77b4 !important;
+        border-color: #1f77b4 !important;
     }
     </style>
     """,
@@ -353,4 +360,5 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
