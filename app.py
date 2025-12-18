@@ -234,7 +234,7 @@ summary_tbl = pd.DataFrame(
     }
 ).reset_index(drop=True)
 
-# Default behavior: last 10 days
+# Default behavior: all days
 if not show_all_days:
     summary_tbl = summary_tbl.tail(10)
 
@@ -340,6 +340,7 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
 
 
