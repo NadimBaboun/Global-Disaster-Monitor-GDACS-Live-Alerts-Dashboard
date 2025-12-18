@@ -268,7 +268,7 @@ with col4:
     .value_counts()
     .sort_values(ascending=False)
     )
-    st.bar_chart(level_counts, height= 365)
+    st.bar_chart(level_counts, height= 367)
 
 st.subheader("Event type proportions")
 type_counts = filtered["event_type"].value_counts()
@@ -341,6 +341,7 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
 
 
