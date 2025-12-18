@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import requests
 import streamlit as st
-import altair as alt
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Global Disaster Monitor (GDACS)", page_icon="🌐", layout="wide")
 
@@ -289,44 +287,9 @@ fig, ax = plt.subplots(figsize=(5, 5))
 ax.pie(type_counts.values, labels=type_counts.index.astype(str), autopct="%1.1f%%", startangle=90)
 st.pyplot(fig)
 
-# --------- OG LOOK + SCROLLABLE FUNCTIONALITY (Altair in a scroll box) ----------
 st.subheader("Top countries (by alert count)")
-
-country_counts = filtered["country"].value_counts()
-
-# Keep behavior similar to OG: show top 10 by default,
-# but if many countries are selected you can still see them by scrolling.
-top_n = st.slider("Countries to display", 5, min(60, max(5, len(country_counts))), 10)
-
-plot_counts = country_counts.head(top_n).reset_index()
-plot_counts.columns = ["country", "alerts"]
-
-n = len(plot_counts)
-chart_width = max(650, n * 70)  # wider => horizontal scroll
-
-chart = (
-    alt.Chart(plot_counts)
-    .mark_bar()
-    .encode(
-        x=alt.X("country:N", sort="-y", title="Country"),
-        y=alt.Y("alerts:Q", title="Alerts"),
-        tooltip=["country:N", "alerts:Q"],
-    )
-    .properties(width=chart_width, height=380)
-)
-
-# Put chart inside a horizontally-scrollable div (keeps it looking clean)
-html = chart.to_html()
-components.html(
-    f"""
-    <div style="width: 100%; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px;">
-        {html}
-    </div>
-    """,
-    height=430,
-    scrolling=False,
-)
-# -------------------------------------------------------------------------------
+top_countries = filtered["country"].value_counts().head(10)
+st.bar_chart(top_countries)
 
 st.subheader("Map (highest alert score)")
 map_df = (
@@ -357,4 +320,5 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
     try:
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
+
         st.error(str(e))
