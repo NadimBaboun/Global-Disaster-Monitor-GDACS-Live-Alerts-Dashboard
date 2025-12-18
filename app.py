@@ -260,12 +260,12 @@ col3, col4 = st.columns(2)
 
 with col3:
     st.subheader("Cumulative alerts (selected range)")
-    st.line_chart(cumulative_alerts)
+    st.line_chart(cumulative_alerts, height=350)
 
 with col4:
     st.subheader("Alert level distribution")
     level_counts = filtered["alert_level"].value_counts()
-    st.bar_chart(level_counts)
+    st.bar_chart(level_counts, height=350)
 
 st.subheader("Event type proportions")
 type_counts = filtered["event_type"].value_counts()
@@ -338,4 +338,5 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
