@@ -213,6 +213,14 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
 else:
     start_d, end_d = default_start, today_utc
 
+# ---------- UPDATED: selection-aware message ----------
+no_filter_selected = (not selected_types) or (not selected_levels) or (not selected_countries)
+
+if no_filter_selected:
+    st.info("Please select at least one option from each filter to continue.")
+    st.stop()
+# ---------------------------------------------------
+
 # Clean, single-mask filtering
 mask = (
     df["event_type"].isin(selected_types)
@@ -222,6 +230,7 @@ mask = (
 )
 filtered = df.loc[mask].copy()
 
+# Keep the original message only when filters ARE selected but no data matches
 if filtered.empty:
     st.warning("No records match your filters.")
     st.stop()
@@ -328,7 +337,7 @@ st.markdown(
 top_n = st.slider(
     "Number of countries shown",
     min_value=5,
-    max_value=max_n,
+    max_value=max_n if max_n >= 5 else 5,
     value=top_n,
     key="top_n_countries",
 )
@@ -364,6 +373,3 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
-
-
-
