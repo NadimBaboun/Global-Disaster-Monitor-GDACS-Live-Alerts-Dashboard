@@ -224,7 +224,7 @@ cumulative_alerts = daily_count.cumsum()
 st.sidebar.subheader("Daily summary")
 
 # Toggle: default is last 10 days
-show_all_days = st.sidebar.checkbox("Show all days", value=False)
+show_all_days = st.sidebar.checkbox("Show all days", value=True)
 
 summary_tbl = pd.DataFrame(
     {
@@ -340,5 +340,6 @@ with st.expander("Debug: show raw feed preview (first 400 chars)"):
         st.code(fetch_gdacs_rss_xml()[:400])
     except Exception as e:
         st.error(str(e))
+
 
 
