@@ -239,6 +239,7 @@ summary_tbl = pd.DataFrame(
 if not show_all_days:
     summary_tbl = summary_tbl.tail(10)
 
+# Make row numbering start at 1 instead of 0
 summary_tbl.index = range(1, len(summary_tbl) + 1)
 
 st.sidebar.dataframe(
@@ -271,15 +272,7 @@ st.subheader("Top countries (by alert count)")
 country_counts = filtered["country"].value_counts().sort_values(ascending=False)
 st.bar_chart(country_counts, height=500)
 
-st.subheader("Map (highest alert score)")
-map_df = (
-    filtered.dropna(subset=["latitude", "longitude", "alert_score"])
-    .sort_values("alert_score", ascending=False)
-    .head(max_points)
-)
-st.map(map_df[["latitude", "longitude"]])
-
-# ---------- Additional plots (Matplotlib) ----------
+# ---------- Newly added charts go HERE (under Top countries, before Map) ----------
 st.divider()
 st.header("Additional insights")
 
@@ -289,6 +282,7 @@ cA, cB = st.columns(2)
 with cA:
     st.subheader("Event type distribution (pie)")
     event_counts = filtered["event_type"].value_counts().sort_values(ascending=False)
+
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.pie(
         event_counts.values,
@@ -303,6 +297,7 @@ with cA:
 with cB:
     st.subheader("Alert score distribution (histogram)")
     scores = pd.to_numeric(filtered["alert_score"], errors="coerce").dropna()
+
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.hist(scores, bins=20)
     ax.set_title("Distribution of alert scores")
@@ -327,6 +322,7 @@ with cC:
             .index.tolist()
         )
         data = [box_df.loc[box_df["event_type"] == t, "alert_score"].values for t in order]
+
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.boxplot(data, labels=order, showfliers=False)
         ax.set_title("Alert score by event type")
@@ -368,6 +364,7 @@ with cE:
         .size()
         .unstack(fill_value=0)
     )
+
     if not pivot.empty:
         fig, ax = plt.subplots(figsize=(10, 5))
         pivot.plot(ax=ax)
@@ -384,6 +381,7 @@ with cE:
 with cF:
     st.subheader("Daily alerts (7-day rolling average)")
     rolling = daily_count.rolling(7).mean()
+
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(daily_count.index, daily_count.values, label="Daily", alpha=0.4)
     ax.plot(rolling.index, rolling.values, label="7-day rolling avg")
@@ -395,36 +393,11 @@ with cF:
     plt.tight_layout()
     show_fig(fig)
 
-# Row 4: Scatter population vs score
-st.subheader("Alert score vs population (scatter)")
-pop = pd.to_numeric(filtered["population_text"], errors="coerce")
-score = pd.to_numeric(filtered["alert_score"], errors="coerce")
-tmp = pd.DataFrame({"population": pop, "alert_score": score}).dropna()
-
-if not tmp.empty:
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.scatter(tmp["population"], tmp["alert_score"], alpha=0.5)
-    ax.set_title("Alert score vs affected population")
-    ax.set_xlabel("Population")
-    ax.set_ylabel("Alert score")
-    plt.tight_layout()
-    show_fig(fig)
-else:
-    st.info("Population/alert_score values are not numeric enough to plot the scatter.")
-
-# ---------- Table ----------
-st.subheader("Most recent alerts")
-show_cols = [
-    "main_time",
-    "event_type",
-    "alert_level",
-    "alert_score",
-    "country",
-    "severity_text",
-    "population_text",
-    "link",
-]
-st.dataframe(
-    filtered.sort_values("main_time", ascending=False)[show_cols].head(50),
-    use_container_width=True,
+# ---------- Map ----------
+st.subheader("Map (highest alert score)")
+map_df = (
+    filtered.dropna(subset=["latitude", "longitude", "alert_score"])
+    .sort_values("alert_score", ascending=False)
+    .head(max_points)
 )
+st.map(map_df[["latitude", "longitude"]])
